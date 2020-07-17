@@ -1,11 +1,17 @@
 # Define parameters
-SYM_NORM = True  # symmetric (True) vs. left-only (False) normalization
-NB_EPOCH = 200
-M=12 #ok
 POOL_SIZE=6
-BATCH_SIZE=256
-LEARN_RATE=0.001
-TIME_STEP=14
-SMART_NUM=12
 DIVIDE=9
+#data_cleaning
+DIVIDE_DISTANCE = 4
+DROP_NUM = 3
+DROP_RATE = 0.5
+SMART_NUMBER=9
+#siamese
 IDE=1
+TIME_STEP=14
+NB_EPOCH=51
+BATCH_SIZE=1024
+L_UNIT=64
+LEARN_RATE=0.1
+M=1
+W_COEFFICIENT=0

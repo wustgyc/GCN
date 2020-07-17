@@ -236,6 +236,8 @@ def create_model(learn_rate=LEARN_RATE,L_unit=L_UNIT,Dense_unit=1):
     model.add(Dense(units=1,activation="sigmoid",kernel_initializer=kernel_initializer))
     model.compile(loss='binary_crossentropy', optimizer=Adam(lr=learn_rate),weighted_metrics=['binary_crossentropy'])
     return model
+
+
 #序列化并分离测试集
 sample,label,train_val_range,test_range=serialize_and_split(TIME_STEP,0.8,random=True)   #id_train_range<id_test_range
 #标准化

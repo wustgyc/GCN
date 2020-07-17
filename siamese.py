@@ -1,5 +1,6 @@
 import os
 import psutil
+import tensorflow as tf
 from keras import regularizers,initializers,constraints,activations
 from keras.layers import*
 from keras.models import Model,load_model,Sequential
@@ -7,26 +8,15 @@ from keras.optimizers import Adam
 import keras.backend as K
 from keras.callbacks import LambdaCallback,Callback,TensorBoard
 from sklearn.metrics import roc_auc_score,classification_report
-import matplotlib.pyplot as plt
 from keras.initializers import *
 from sklearn.preprocessing import minmax_scale
 import numpy as np
-from sklearn.utils import shuffle
 from sklearn.model_selection import StratifiedKFold,train_test_split
 from keras.callbacks import LearningRateScheduler
-###
+import parameter
 import warnings
 import math
-warnings.filterwarnings("ignore")
-IDE=1
-TIME_STEP=14
-NB_EPOCH=1000
-BATCH_SIZE=1024
-L_UNIT=18
-LEARN_RATE=0.1
-SMART_NUMBER=12
-M=1
-W_COEFFICIENT=0
+#warnings.filterwarnings("ignore")
 
 
 class Metrics(Callback):
@@ -82,7 +72,7 @@ def loss_siamese(y_true,y_pred):
     p0 = 1. - y_true
     p1=y_true
     g0=K.square(y_pred)
-    g1=K.square(K.maximum(0.,M-y_pred))
+    g1=K.square(K.maximum(0.,parameter.M-y_pred))
     return K.mean(p0*g0+p1*g1,axis=-1)
 def create_pair(sample,label):
     sample_1 = []
@@ -95,52 +85,52 @@ def create_pair(sample,label):
             label_pair.append(int(label[i]!=label[j]))
     print("数据对创建成功,",len(sample_1),"对数据")
     return np.array([sample_1,sample_2]),np.array(label_pair)
-def create_model(L_unit=L_UNIT):
-    x = Model()
-    x.add(LSTM(dropout=0.5,
+def create_model():
+    x = Sequential()
+    x.add(Bidirectional(LSTM(dropout=0.5,
                 recurrent_dropout=0.5,
-                units=L_unit,
+                units=parameter.L_UNIT,
                 return_sequences=True,
-                kernel_regularizer=regularizers.l2(W_COEFFICIENT),
-                bias_regularizer=regularizers.l2(W_COEFFICIENT)))
+                kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
+                bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
-    x.add(LSTM(units=L_unit,
+    x.add(Bidirectional(LSTM(units=parameter.L_UNIT,
                 dropout=0.5,
                 recurrent_dropout=0.5,
                 return_sequences=True,
-                kernel_regularizer=regularizers.l2(W_COEFFICIENT),
-                bias_regularizer=regularizers.l2(W_COEFFICIENT)))
+                kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
+                bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
-    x.add(LSTM(units=L_unit,
+    x.add(Bidirectional(LSTM(units=parameter.L_UNIT,
                 dropout=0.5,
                 recurrent_dropout=0.5,
                 return_sequences=True,
-                kernel_regularizer=regularizers.l2(W_COEFFICIENT),
-                bias_regularizer=regularizers.l2(W_COEFFICIENT)))
+                kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
+                bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
 
-    x.add(LSTM(units=L_unit,
+    x.add(Bidirectional(LSTM(units=parameter.L_UNIT,
                 dropout=0.5,
                 recurrent_dropout=0.5,
                 return_sequences=False,
-                kernel_regularizer=regularizers.l2(W_COEFFICIENT),
-                bias_regularizer=regularizers.l2(W_COEFFICIENT)))
+                kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
+                bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
 
     x.add(Dense(units=128,
                 activation='relu',
-                kernel_regularizer=regularizers.l2(W_COEFFICIENT),
-                bias_regularizer=regularizers.l2(W_COEFFICIENT)))
+                kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
+                bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT)))
 
     x.add(Dense(units=256,
-                kernel_regularizer=regularizers.l2(W_COEFFICIENT),
-                use_bias=False))
+                kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
+                bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT)))
 
     shared_model = x
-    left_input = Input(shape=(14,12))
-    right_input = Input(shape=(14,12))
+    left_input = Input(shape=(parameter.TIME_STEP,parameter.SMART_NUMBER))
+    right_input = Input(shape=(parameter.TIME_STEP,parameter.SMART_NUMBER))
 
-    eulstm_distance = EulerDist(activation="sigmoid",kernel_regularizer=regularizers.l2(W_COEFFICIENT))([shared_model(left_input), shared_model(right_input)])
+    eulstm_distance = EulerDist(activation="sigmoid",kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT))([shared_model(left_input), shared_model(right_input)])
 
     model = Model(inputs=[left_input, right_input], outputs=[eulstm_distance])
     model.compile(loss=loss_siamese, optimizer=Adam(), metrics=['accuracy'])
@@ -169,12 +159,15 @@ if __name__ == '__main__':
 
     X=np.load("./temp_data/sample.npy")
     Y = np.load("./temp_data/label.npy")
+    #常量也变了
+    parameter.SMART_NUMBER=X.shape[2]
+    print("数据读取成功")
 
     # -----------------------------------标准化
-    X = minmax_scale(np.reshape(X, (-1, 12)))
-    X = np.reshape(X, (-1, TIME_STEP, 12))
+    X = minmax_scale(np.reshape(X, (-1, parameter.SMART_NUMBER)))
+    X = np.reshape(X, (-1, parameter.TIME_STEP, parameter.SMART_NUMBER))
 
-    print("数据读取成功")
+    # -----------------------------------分离测试集
     X_train,X_test,Y_train,Y_test=train_test_split(X,Y,shuffle=True,random_state=0,test_size=0.3)
 
     # -----------------------------------下采样，要不然内存读不下
@@ -182,27 +175,27 @@ if __name__ == '__main__':
 
     # -----------------------------------获取数据对
     X_train,Y_train=create_pair(X_train,Y_train)
-    X_train=X_train[:,:6000]
-    Y_train=Y_train[:6000]
-    # X_train=np.ones((2,6000,14,12))
+    X_train=X_train[:,:10000]
+    Y_train=Y_train[:10000]
+    # X_train=np.ones((2,6000,TIME_STEP,SMART_NUMBER))
     # Y_train=np.zeros(6000)
     # for i in range(6000):
     #     if i %2==0:
-    #         X_train[0][i]=np.ones((14,12))
-    #         X_train[1][i]=np.zeros((14, 12))
+    #         X_train[0][i]=np.ones((TIME_STEP,SMART_NUMBER))
+    #         X_train[1][i]=np.zeros((TIME_STEP, SMART_NUMBER))
     # for i in range(6000):
     #     if i % 2 == 0:
     #         Y_train[i]=1
     # -----------------------------------训练
-    model=create_model(18)
+    model=create_model()
     lrate = LearningRateScheduler(step_decay)
-    tbCallBack = TensorBoard(log_dir="./tensorboard/log2", histogram_freq=1,write_grads=True,batch_size=BATCH_SIZE) #tensorboard可视化
+    tbCallBack = TensorBoard(log_dir="./tensorboard/log2", histogram_freq=1,batch_size=parameter.BATCH_SIZE) #tensorboard可视化
     metrics=Metrics()
     model.fit([X_train[0],X_train[1]], Y_train,
               verbose=1,
-              batch_size=BATCH_SIZE,
+              batch_size=parameter.BATCH_SIZE,
               shuffle=True,
-              epochs=NB_EPOCH,
-              callbacks=[lrate,tbCallBack],
+              epochs=parameter.NB_EPOCH,
+              callbacks=[tbCallBack,lrate],
               validation_split=0.3
               )

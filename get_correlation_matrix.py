@@ -107,12 +107,14 @@ def get_correlation_matrix():
 
     return correlation_matrix
 
-def get_sample(num):
+def get_sample(num,model=""):
     conn = sqlite3.connect("./SMART/drive_stats.db")
     c = conn.cursor()
-    query = "select *from STA_DISK order by serial_number,date"
-    cursor = c.execute(query)
+    query = "select date,serial_number,model,failure,smart_1_normalized,smart_4_raw,smart_5_raw,smart_12_raw,smart_187_normalized,smart_193_normalized,smart_196_raw,smart_197_raw,smart_198_raw\
+             from drive_stats where model=\"{}\" and failure!=-1 order by serial_number,date"
+    cursor = c.execute(query.format(model))
     result=cursor.fetchall()
+
     assert num < len(result)
     if num==-1:
         num=len(result)
@@ -123,6 +125,7 @@ def get_sample(num):
     cursor.close()
     conn.commit()
     conn.close()
+
     return sample
 
 
