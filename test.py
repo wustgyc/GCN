@@ -1,7 +1,12 @@
 import numpy as np
 from sklearn.impute import SimpleImputer
-a=[1,1,3,2,4,1,1,33,1]
-for i,row in enumerate(a):
-    while i<len(a) and a[i]==1:
-        del a[i]
+
+a=np.array(a)
 print(a)
+for i in range(3):
+    for j,row in enumerate(a):
+        if np.isnan(row[i]):
+            print(row)
+
+a=77
+print(np.isnan(a))

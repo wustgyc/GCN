@@ -12,7 +12,6 @@ from graph import GraphConvolution
 from utils import *
 from keras.utils import plot_model
 from sklearn.model_selection import train_test_split
-from Parameter import *
 import os
 import warnings
 warnings.filterwarnings("ignore")

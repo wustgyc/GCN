@@ -147,10 +147,17 @@ def data_serializing():
             step_label[i] = 0
 
     # 缺失值补全
-    imp_median = SimpleImputer(missing_values=np.nan, strategy='median')  # 中值补全
+    #防止某列全nan被删除,若有，把第一个nan设为0
     sample = np.reshape(sample, (-1, parameter.SMART_NUMBER))
+    for i in range(parameter.SMART_NUMBER):
+        count=0
+        for j,row in enumerate(sample):
+            if np.isnan(row[i]):
+                count+=1
+        if count==len(sample):
+            sample[0][i]=0
+    imp_median = SimpleImputer(missing_values=np.nan, strategy='median')  # 中值补全
     sample = imp_median.fit_transform(sample)
-    parameter.SMART_NUMBER = sample.shape[1]  # 如果一列全为np.nan，这一列会消失,SMART_NUMBER将变化
     sample = np.reshape(sample, (-1, parameter.TIME_STEP, parameter.SMART_NUMBER))
 
     np.save("./temp_data/sample_ST10000NM0086.npy", sample)  #数据依次按serial_number,date排序
