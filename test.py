@@ -1,12 +1,12 @@
 import numpy as np
 from sklearn.impute import SimpleImputer
 
-a=np.array(a)
-print(a)
-for i in range(3):
-    for j,row in enumerate(a):
-        if np.isnan(row[i]):
-            print(row)
-
-a=77
-print(np.isnan(a))
+import tensorflow as tf
+import keras.backend as K
+a=[[1.,2,3],[1,2,3],[1,2,3]]
+# a=tf.convert_to_tensor(a,dtype=float)
+a=(K.sum(a,axis=-1)-0.5)/2
+a=K.reshape(a,(-1,1))
+a=K.mean(a,axis=-1)
+with tf.Session() as sess:
+    print(sess.run(a))

@@ -114,13 +114,13 @@ def create_pair(sample,label):
     return np.array([sample_1,sample_2]),np.array(label_pair)
 
 if __name__ == '__main__':
-    X = np.load("./temp_data/sample.npy")
-    Y = np.load("./temp_data/label.npy")
+    X=np.load("./temp_data/sample_ST12000NM0007.npy")
+    Y = np.load("./temp_data/label_ST12000NM0007.npy")
     X.astype('float32')
     Y.astype('int')
     # -----------------------------------标准化
-    X = minmax_scale(np.reshape(X, (-1, 12)))
-    X = np.reshape(X, (-1, 14, 12))
+    X = minmax_scale(np.reshape(X, (-1, 9)))
+    X = np.reshape(X, (-1, 14, 9))
 
     print("数据读取成功")
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, shuffle=True, random_state=0, test_size=0.3)
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
 
     n_epochs = 100
-    input_shape=(14,12)
+    input_shape=(14,9)
     base_network = create_base_network(input_shape)
 
     input_a = Input(shape = input_shape)
@@ -154,6 +154,10 @@ if __name__ == '__main__':
     adam = Adam()##定义优化器
 
     model.compile(loss = contrastive_loss, optimizer = adam)##激活model
+    model.summary()
+    print(model.layers[2].get_output_at(0))
+    print(model.layers[2].get_output_at(1))
+    print(model.layers[2].get_output_at(2))
 
     tbCallBack = TensorBoard(log_dir="./tensorboard/log2", histogram_freq=1, write_grads=True,
                              batch_size=BATCH_SIZE)  # tensorboard可视化
@@ -163,7 +167,7 @@ if __name__ == '__main__':
               batch_size=BATCH_SIZE,
               shuffle=True,
               epochs=NB_EPOCH,
-              callbacks=[learn_rate, tbCallBack],
+              callbacks=[learn_rate],
               validation_split=0.3
               )
 
