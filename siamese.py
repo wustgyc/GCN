@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import warnings
 import math
 #warnings.filterwarnings("ignore")
+from pandas import Series, DataFrame
 def precision(y_true, y_pred):
     # Calculates the precision
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
@@ -105,7 +106,7 @@ class Metrics(Callback):
         return
 
 class Middle_Output(Callback):
-    def on_train_begin(self,epoch,logs={}):
+    def on_train_begin(self, logs=None):
         sequence_output_1 = Model(inputs=model.layers[2].layers[0].input, outputs=model.layers[2].layers[5].output)
         ans_1 = sequence_output_1.predict(X_train[0])
         ans_2 = sequence_output_1.predict(X_train[1])
@@ -113,17 +114,15 @@ class Middle_Output(Callback):
         zero_distribute = []
         for i in range(len(X_train[0])):
             if Y_train[i]==1:
-                one_distribute.append(np.sum(np.abs(ans_1[i]-ans_2[i])))
+                one_distribute.append(sum(np.abs(ans_1[i]-ans_2[i])))
             else:
                 zero_distribute.append(np.sum(np.abs(ans_1[i]-ans_2[i])))
-        print(len(one_distribute),len(zero_distribute))
-        plt.hist(x=one_distribute,bins=20,color = 'steelblue',edgecolor = 'black')
-        plt.savefig(str(epoch)+'_one.png')
-        plt.close("all")
 
-        plt.hist(x=zero_distribute, bins=20, color='steelblue', edgecolor='black')
-        plt.savefig(str(epoch) + '_zeros.png')
-        plt.close("all")
+        one_distribute=Series(one_distribute)
+        zero_distribute=Series(zero_distribute)
+        one_distribute.plot(kind='kde')
+        zero_distribute.plot(kind='kde')
+        plt.show()
 
 
 
