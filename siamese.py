@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import warnings
 import math
 #warnings.filterwarnings("ignore")
+from pandas import Series, DataFrame
 def precision(y_true, y_pred):
     # Calculates the precision
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
@@ -25,14 +26,19 @@ def precision(y_true, y_pred):
     precision = true_positives / (predicted_positives + K.epsilon())
     return precision
 
-
-def recall(y_true, y_pred):
+def recall_1(y_true, y_pred):
     # Calculates the recall
-    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-    recall = true_positives / (possible_positives + K.epsilon())
-    return recall
+    true_positives = K.sum(K.round(y_true * y_pred))
+    possible_positives = K.sum(K.round(y_true))
+    recall_1 = true_positives / (possible_positives + K.epsilon())
+    return recall_1
 
+def recall_0(y_true, y_pred):
+
+    true_neg=K.sum(K.round((1-y_true) * (1-y_pred)))
+    possible_neg=K.sum(K.round(1-y_true))
+    recall_0=true_neg/(possible_neg+K.epsilon())
+    return recall_0
 
 def threshold_judge(y_pred):
     for i,row in enumerate(y_pred):
@@ -106,6 +112,37 @@ class Metrics(Callback):
              plot(self)
         return
 
+class Middle_Output(Callback):
+    def on_epoch_begin(self, epoch, logs=None):
+        sequence_output_1 = Model(inputs=model.layers[2].layers[0].input, outputs=model.layers[2].layers[5].output)
+        ans_1 = sequence_output_1.predict(X_train[0])
+        ans_2 = sequence_output_1.predict(X_train[1])
+        one_distribute=[]
+        zero_distribute = []
+        output1=[]
+        for i in range(len(X_train[0])):
+            output1.append(np.sum(np.abs(ans_1[i])))
+            if Y_train[i]==1:
+                one_distribute.append(np.sum(np.abs(ans_1[i]-ans_2[i])))
+            else:
+                zero_distribute.append(np.sum(np.abs(ans_1[i]-ans_2[i])))
+
+        one_distribute=Series(one_distribute,name="one")
+        zero_distribute = Series(zero_distribute,name="zeor")
+        output1=Series(output1)
+        one_distribute.plot(kind='kde')
+        zero_distribute.plot(kind='kde')
+
+        plt.savefig(str(epoch))
+        plt.close("all")
+        output1.plot(kind='kde')
+        plt.savefig(str(epoch)+"out")
+        plt.close("all")
+        # plt.hist(x=one_distribute,bins=20,density=True,color="red",alpha=0.5)
+        # plt.hist(x=zero_distribute, bins=20, density=True, color="blue", alpha=0.5)
+        # plt.show()
+        # plt.close("all")
+
 class EulerDist(Layer):
     """Basic graph convolution layer as in https://arxiv.org/abs/1609.02907"""
     def __init__(self,
@@ -171,47 +208,50 @@ def create_pair(sample,label):
     return np.array([sample_1,sample_2]),np.array(label_pair)
 
 def create_model():
-    x = Sequential()
-    x.add(Bidirectional(LSTM(
+    shared_model = Sequential()
+    shared_model.add(Bidirectional(LSTM(
+                dropout=0.5,
                 units=parameter.L_UNIT,
                 return_sequences=True,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
-    x.add(Bidirectional(LSTM(units=parameter.L_UNIT,
+    shared_model.add(Bidirectional(LSTM(units=parameter.L_UNIT,
+                dropout=0.5,
                 return_sequences=True,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
-    x.add(Bidirectional(LSTM(units=parameter.L_UNIT,
+    shared_model.add(Bidirectional(LSTM(units=parameter.L_UNIT,
+                dropout=0.5,
                 return_sequences=True,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
 
-    x.add(Bidirectional(LSTM(units=parameter.L_UNIT,
+    shared_model.add(Bidirectional(LSTM(units=parameter.L_UNIT,
+                dropout=0.5,
                 return_sequences=False,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
 
-    x.add(Dense(units=128,
+    shared_model.add(Dense(units=32,
                 activation='relu',
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT)))
 
-    x.add(Dense(units=256,
+    shared_model.add(Dense(units=64,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT)))
 
-    shared_model = x
     left_input = Input(shape=(parameter.TIME_STEP,parameter.SMART_NUMBER))
     right_input = Input(shape=(parameter.TIME_STEP,parameter.SMART_NUMBER))
 
     eulstm_distance = EulerDist(activation="sigmoid",kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT))([shared_model(left_input), shared_model(right_input)])
 
     model = Model(inputs=[left_input, right_input], outputs=[eulstm_distance])
-    model.compile(loss=loss_siamese, optimizer=Adam(), metrics=[recall,precision])
+    model.compile(loss=loss_siamese, optimizer=Adam(), metrics=[recall_0,recall_1])
 
     return model
 
@@ -316,11 +356,24 @@ if __name__ == '__main__':
 
     # -----------------------------------获取数据对
     X_train,Y_train=create_pair(X_train,Y_train)
-    X_train=X_train[:,:100000]
-    Y_train=Y_train[:100000]
+    X_train=X_train[:,:20000]
+    Y_train=Y_train[:20000]
+
+    # X_train=np.zeros((2,6000,14,9))
+    # Y_train=np.zeros(6000)
+    # for i in range(6000):
+    #     if i%2==0:
+    #         X_train[0][i]=np.zeros((14,9))
+    #         X_train[1][i] = np.zeros((14, 9))
+    #         Y_train[i]=0
+    #     else:
+    #         X_train[0][i] = np.zeros((14, 9))
+    #         X_train[1][i] = np.ones((14, 9))
+    #         Y_train[i] = 1
 
     # -----------------------------------训练
     model=create_model()
+    middle_output=Middle_Output()
     lrate = LearningRateScheduler(step_decay)
     tbCallBack = TensorBoard(log_dir="./tensorboard/log2", histogram_freq=1,batch_size=parameter.BATCH_SIZE,update_freq="epoch") #tensorboard可视化
     metrics=Metrics()
@@ -332,3 +385,5 @@ if __name__ == '__main__':
               callbacks=[lrate,tbCallBack],
               validation_split=0.3
               )
+
+

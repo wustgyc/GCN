@@ -193,12 +193,23 @@ def create_model():
 
 
 
-sample=np.load("./temp_data/sample_ST12000NM0007.npy")
-label=np.load("./temp_data/label_ST12000NM0007.npy")
+X=np.load("./temp_data/sample_ST12000NM0007.npy")
+Y = np.load("./temp_data/label_ST12000NM0007.npy")
+X_1,Y_1=UnderSampler(X,Y,ratio=1,random_state=1)
+X = np.load("./temp_data/sample_ST4000DM000.npy")
+Y = np.load("./temp_data/label_ST4000DM000.npy")
+X_2, Y_2 = UnderSampler(X, Y, ratio=1, random_state=1)
+X = np.load("./temp_data/sample_ST10000NM0086.npy")
+Y = np.load("./temp_data/label_ST10000NM0086.npy")
+X_3, Y_3 = UnderSampler(X, Y, ratio=1, random_state=1)
+X=np.vstack((X_1,X_2))
+Y=np.hstack((Y_1,Y_2))
+sample = np.vstack((X, X_3))
+label = np.hstack((Y, Y_3))
 
 sample = minmax_scale(np.reshape(sample, (-1, parameter.SMART_NUMBER)))
 sample = np.reshape(sample, (-1, parameter.TIME_STEP, parameter.SMART_NUMBER))
-sample,label=UnderSampler(sample,label,ratio=1,random_state=1)
+
 
 kfold = StratifiedKFold(n_splits=4, shuffle=True,random_state=4)
 LR=[-1]
