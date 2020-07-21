@@ -211,6 +211,7 @@ def create_model():
     shared_model = Sequential()
     shared_model.add(Bidirectional(LSTM(
                 dropout=0.5,
+                recurrent_dropout=0.5,
                 units=parameter.L_UNIT,
                 return_sequences=True,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
@@ -218,12 +219,14 @@ def create_model():
 
     shared_model.add(Bidirectional(LSTM(units=parameter.L_UNIT,
                 dropout=0.5,
+                recurrent_dropout=0.5,
                 return_sequences=True,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
     shared_model.add(Bidirectional(LSTM(units=parameter.L_UNIT,
                 dropout=0.5,
+                recurrent_dropout=0.5,
                 return_sequences=True,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
@@ -231,15 +234,19 @@ def create_model():
 
     shared_model.add(Bidirectional(LSTM(units=parameter.L_UNIT,
                 dropout=0.5,
+                recurrent_dropout=0.5,
                 return_sequences=False,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT))))
 
+    shared_model.add(Dropout(0.5))
 
     shared_model.add(Dense(units=32,
                 activation='relu',
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
                 bias_regularizer=regularizers.l2(parameter.W_COEFFICIENT)))
+
+    shared_model.add(Dropout(0.5))
 
     shared_model.add(Dense(units=64,
                 kernel_regularizer=regularizers.l2(parameter.W_COEFFICIENT),
